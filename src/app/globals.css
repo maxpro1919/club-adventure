@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a1a;
+  --foreground: #ededed;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-pixel: var(--font-pixel);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-pixel), monospace;
+}
+
+/* 像素风基础样式 */
+.pixel-border {
+  border: 3px solid #fff;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+}
+
+.pixel-text {
+  font-family: var(--font-pixel), monospace;
+}
+
+.pixel-input {
+  background: #1a1a2e;
+  border: 3px solid #555;
+  color: #fff;
+  padding: 8px 12px;
+  font-family: var(--font-pixel), monospace;
+  font-size: 12px;
+}
+
+.pixel-input:focus {
+  outline: none;
+  border-color: #fff;
+}
+
+.pixel-btn {
+  background: #2a2a4a;
+  border: 2px solid #555;
+  color: #fff;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-family: var(--font-pixel), monospace;
+  font-size: 12px;
+  transition: all 0.1s;
+}
+
+.pixel-btn:hover {
+  background: #3a3a5a;
+  border-color: #fff;
+}
+
+.pixel-btn-active {
+  background: #4a4a6a;
+  border-color: #fff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+.pixel-btn-primary {
+  background: #4caf50;
+  border-color: #66bb6a;
+}
+
+.pixel-btn-primary:hover {
+  background: #66bb6a;
+}
