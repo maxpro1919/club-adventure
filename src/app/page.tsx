@@ -31,9 +31,9 @@ export default function Home() {
     }
   }
 
-  const handleJoinExisting = async () => {
+  const handleJoinExisting = () => {
     if (!joinCode.trim()) return
-    setStep('create')
+    router.push(`/room/${joinCode.trim()}`)
   }
 
   return (

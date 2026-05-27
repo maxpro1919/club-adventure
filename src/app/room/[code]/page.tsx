@@ -5,11 +5,13 @@ import { useRoom } from '@/hooks/useRoom'
 import { useMatch } from '@/hooks/useMatch'
 import RoomLobby from '@/components/RoomLobby'
 import MatchArena from '@/components/MatchArena'
+import CharacterCreator from '@/components/CharacterCreator'
+import { AnimalType, PlayerColor, Accessory } from '@/lib/types'
 
 export default function RoomPage() {
   const params = useParams()
   const code = params.code as string
-  const { room, players, currentPlayer, loading } = useRoom(code)
+  const { room, players, currentPlayer, loading, joinRoom } = useRoom(code)
   const {
     match,
     currentCard,
@@ -21,8 +23,34 @@ export default function RoomPage() {
   } = useMatch(room?.id ?? null, currentPlayer?.id ?? null)
 
   if (loading) return <div className="text-white text-center mt-20 pixel-text">加载中...</div>
-  if (!room) return <div className="text-white text-center mt-20 pixel-text">房间不存在</div>
-  if (!currentPlayer) return <div className="text-white text-center mt-20 pixel-text">请先创建角色</div>
+  if (!room) return <div className="text-white text-center mt-20 pixel-text">房间不存在或已过期</div>
+
+  if (!currentPlayer) {
+    const handleCharacterComplete = async (character: {
+      nickname: string
+      animal: AnimalType
+      color: PlayerColor
+      accessory: Accessory
+    }) => {
+      try {
+        await joinRoom(
+          character.nickname,
+          character.animal,
+          character.color,
+          character.accessory
+        )
+      } catch (err) {
+        console.error('Failed to join room:', err)
+      }
+    }
+
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center bg-gray-950 text-white">
+        <h1 className="text-2xl pixel-text mb-8">社团大冒险</h1>
+        <CharacterCreator onComplete={handleCharacterComplete} />
+      </main>
+    )
+  }
 
   const handleStartMatch = () => {
     const opponent = players.find((p) => p.id !== currentPlayer.id)
