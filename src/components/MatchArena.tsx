@@ -12,6 +12,7 @@ interface Props {
   onSelect: (choice: 'A' | 'B' | 'C') => void
   onPlayAgain: () => void
   opponent: Player | null
+  currentPlayer: Player | null
 }
 
 export default function MatchArena({
@@ -22,10 +23,18 @@ export default function MatchArena({
   onSelect,
   onPlayAgain,
   opponent,
+  currentPlayer,
 }: Props) {
   // 结局揭晓
   if (outcome) {
-    return <OutcomeReveal outcome={outcome} onPlayAgain={onPlayAgain} />
+    return (
+      <OutcomeReveal
+        outcome={outcome}
+        onPlayAgain={onPlayAgain}
+        currentPlayer={currentPlayer}
+        opponent={opponent}
+      />
+    )
   }
 
   // 等待匹配中

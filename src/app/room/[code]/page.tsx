@@ -85,6 +85,7 @@ export default function RoomPage() {
             onSelect={makeChoice}
             onPlayAgain={handlePlayAgain}
             opponent={opponent}
+            currentPlayer={currentPlayer}
           />
         ) : (
           <RoomLobby
