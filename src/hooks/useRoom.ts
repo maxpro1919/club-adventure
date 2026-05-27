@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getSupabase } from '@/lib/supabase'
 import { getPlayerId } from '@/lib/player'
 import { Room, Player, AnimalType, PlayerColor, Accessory } from '@/lib/types'
