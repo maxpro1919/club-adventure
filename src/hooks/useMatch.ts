@@ -16,13 +16,16 @@ export function useMatch(roomId: string | null, playerId: string | null) {
 
     const card = getRandomCard()
 
+    // 按字典序排序玩家 ID，避免 player1/player2 顺序歧义
+    const [p1, p2] = [playerId, opponentId].sort()
+
     const { data, error } = await supabase
       .from('matches')
       .insert({
         room_id: roomId,
         card_id: card.id,
-        player1_id: playerId,
-        player2_id: opponentId,
+        player1_id: p1,
+        player2_id: p2,
         status: 'waiting',
       })
       .select()
