@@ -48,6 +48,22 @@ export function useRoom(roomCode: string | null) {
         .single()
       if (error) throw error
       targetRoom = data
+
+      // 检查房间是否过期
+      if (new Date(targetRoom.expires_at) < new Date()) {
+        throw new Error('房间已过期')
+      }
+
+      // 检查房间容量（最多8人）
+      const { count } = await supabase
+        .from('players')
+        .select('*', { count: 'exact', head: true })
+        .eq('room_id', targetRoom.id)
+        .eq('is_online', true)
+
+      if (count && count >= 8) {
+        throw new Error('房间已满（最多8人）')
+      }
     }
 
     // 创建玩家记录
@@ -87,6 +103,13 @@ export function useRoom(roomCode: string | null) {
         .single()
 
       if (roomData) {
+        // 检查房间是否过期
+        if (new Date(roomData.expires_at) < new Date()) {
+          setRoom(null)
+          setLoading(false)
+          return
+        }
+
         setRoom(roomData)
 
         const { data: playersData } = await supabase
@@ -100,23 +123,33 @@ export function useRoom(roomCode: string | null) {
         const playerId = getPlayerId()
         const me = playersData?.find((p) => p.id === playerId)
         if (me) setCurrentPlayer(me)
+
+        // 设置带过滤的实时订阅
+        setupSubscription(roomData.id)
       }
       setLoading(false)
     }
 
     loadRoom()
 
-    // 订阅玩家变化
-    const channel = supabase
-      .channel(`room:${roomCode}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'players',
-      }, () => {
-        loadRoom()
-      })
-      .subscribe()
+    // 订阅玩家变化（带 room_id 过滤）
+    let channel = supabase.channel(`room:${roomCode}`)
+
+    // loadRoom 内部获取到 roomData 后设置订阅
+    const setupSubscription = (roomId: string) => {
+      supabase.removeChannel(channel)
+      channel = supabase
+        .channel(`room:${roomCode}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'players',
+          filter: `room_id=eq.${roomId}`,
+        }, () => {
+          loadRoom()
+        })
+        .subscribe()
+    }
 
     return () => {
       supabase.removeChannel(channel)
