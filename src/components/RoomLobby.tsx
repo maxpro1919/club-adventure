@@ -11,10 +11,15 @@ interface Props {
 }
 
 export default function RoomLobby({ room, players, currentPlayer, onStartMatch }: Props) {
-  const copyInviteLink = () => {
+  const copyInviteLink = async () => {
     const url = `${window.location.origin}/room/${room.code}`
-    navigator.clipboard.writeText(url)
-    alert('邀请链接已复制！')
+    try {
+      await navigator.clipboard.writeText(url)
+      alert('邀请链接已复制！')
+    } catch {
+      // Fallback: 选中文本供手动复制
+      prompt('复制以下链接邀请好友：', url)
+    }
   }
 
   return (

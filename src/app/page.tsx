@@ -10,6 +10,8 @@ export default function Home() {
   const router = useRouter()
   const [step, setStep] = useState<'create' | 'join'>('create')
   const [joinCode, setJoinCode] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
   const { joinRoom } = useRoom(null)
 
   const handleCharacterComplete = async (character: {
@@ -18,6 +20,8 @@ export default function Home() {
     color: PlayerColor
     accessory: Accessory
   }) => {
+    setError(null)
+    setSubmitting(true)
     try {
       const code = await joinRoom(
         character.nickname,
@@ -27,7 +31,9 @@ export default function Home() {
       )
       router.push(`/room/${code}`)
     } catch (err) {
-      console.error('Failed to join room:', err)
+      setError(err instanceof Error ? err.message : '创建房间失败')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -39,6 +45,12 @@ export default function Home() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gray-950 text-white">
       <h1 className="text-2xl pixel-text mb-8">社团大冒险</h1>
+
+      {error && (
+        <div className="mb-4 px-4 py-2 bg-red-900/50 border border-red-500 rounded text-red-200 text-sm pixel-text">
+          {error}
+        </div>
+      )}
 
       {step === 'create' ? (
         <CharacterCreator onComplete={handleCharacterComplete} />
