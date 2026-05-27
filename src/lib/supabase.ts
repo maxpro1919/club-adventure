@@ -17,15 +17,3 @@ export function getSupabase(): SupabaseClient {
   _supabase = createClient(supabaseUrl, supabaseKey)
   return _supabase
 }
-
-// 导出一个代理，延迟初始化
-export const supabase = new Proxy({} as SupabaseClient, {
-  get(_target, prop) {
-    const client = getSupabase()
-    const value = (client as unknown as Record<string, unknown>)[prop as string]
-    if (typeof value === 'function') {
-      return value.bind(client)
-    }
-    return value
-  },
-})

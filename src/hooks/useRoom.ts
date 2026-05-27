@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { getSupabase } from '@/lib/supabase'
 import { getPlayerId } from '@/lib/player'
 import { Room, Player, AnimalType, PlayerColor, Accessory } from '@/lib/types'
 
@@ -19,6 +19,7 @@ export function useRoom(roomCode: string | null) {
   const [players, setPlayers] = useState<Player[]>([])
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   // 加入或创建房间
   const joinRoom = async (
@@ -27,6 +28,7 @@ export function useRoom(roomCode: string | null) {
     color: PlayerColor,
     accessory: Accessory
   ) => {
+    const supabase = getSupabase()
     const playerId = getPlayerId()
 
     // 如果没有 roomCode，创建新房间
@@ -88,25 +90,41 @@ export function useRoom(roomCode: string | null) {
     return targetRoom.code
   }
 
-  // 加载房间和玩家
+  // Effect 1: 加载房间数据
   useEffect(() => {
     if (!roomCode) {
+      setRoom(null)
+      setPlayers([])
+      setCurrentPlayer(null)
       setLoading(false)
       return
     }
 
-    const loadRoom = async () => {
-      const { data: roomData } = await supabase
-        .from('rooms')
-        .select()
-        .eq('code', roomCode)
-        .single()
+    let cancelled = false
 
-      if (roomData) {
+    const loadRoom = async () => {
+      setLoading(true)
+      setError(null)
+
+      try {
+        const supabase = getSupabase()
+
+        const { data: roomData, error: roomError } = await supabase
+          .from('rooms')
+          .select()
+          .eq('code', roomCode)
+          .single()
+
+        if (cancelled) return
+
+        if (roomError || !roomData) {
+          setRoom(null)
+          return
+        }
+
         // 检查房间是否过期
         if (new Date(roomData.expires_at) < new Date()) {
           setRoom(null)
-          setLoading(false)
           return
         }
 
@@ -118,43 +136,76 @@ export function useRoom(roomCode: string | null) {
           .eq('room_id', roomData.id)
           .eq('is_online', true)
 
+        if (cancelled) return
+
         setPlayers(playersData || [])
 
         const playerId = getPlayerId()
         const me = playersData?.find((p) => p.id === playerId)
         if (me) setCurrentPlayer(me)
-
-        // 设置带过滤的实时订阅
-        setupSubscription(roomData.id)
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : '加载房间失败')
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
       }
-      setLoading(false)
     }
 
     loadRoom()
 
-    // 订阅玩家变化（带 room_id 过滤）
-    let channel = supabase.channel(`room:${roomCode}`)
-
-    // loadRoom 内部获取到 roomData 后设置订阅
-    const setupSubscription = (roomId: string) => {
-      supabase.removeChannel(channel)
-      channel = supabase
-        .channel(`room:${roomCode}`)
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'players',
-          filter: `room_id=eq.${roomId}`,
-        }, () => {
-          loadRoom()
-        })
-        .subscribe()
+    return () => {
+      cancelled = true
     }
+  }, [roomCode])
+
+  // Effect 2: Realtime 订阅（依赖 room.id 而非整个 room 对象）
+  const roomIdRef = useRef<string | null>(null)
+  roomIdRef.current = room?.id ?? null
+
+  useEffect(() => {
+    const roomId = roomIdRef.current
+    if (!roomId || !roomCode) return
+
+    const supabase = getSupabase()
+
+    const channel = supabase
+      .channel(`room:${roomCode}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'players',
+        filter: `room_id=eq.${roomId}`,
+      }, async () => {
+        // 收到变更时重新加载数据
+        const currentRoomId = roomIdRef.current
+        if (!currentRoomId) return
+
+        try {
+          const { data: playersData } = await supabase
+            .from('players')
+            .select()
+            .eq('room_id', currentRoomId)
+            .eq('is_online', true)
+
+          if (playersData) {
+            setPlayers(playersData)
+            const playerId = getPlayerId()
+            const me = playersData.find((p) => p.id === playerId)
+            if (me) setCurrentPlayer(me)
+          }
+        } catch {
+          // realtime 刷新失败不中断流程
+        }
+      })
+      .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [roomCode])
+  }, [room?.id, roomCode])
 
-  return { room, players, currentPlayer, loading, joinRoom }
+  return { room, players, currentPlayer, loading, error, joinRoom }
 }

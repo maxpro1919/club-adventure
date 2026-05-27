@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 
 type ChangeHandler = (payload: Record<string, unknown>) => void
 
@@ -11,6 +11,7 @@ export function useRealtime(
   onChange: ChangeHandler
 ) {
   useEffect(() => {
+    const supabase = getSupabase()
     const channelName = `realtime:${table}:${filter || '*'}`
     const channel = supabase
       .channel(channelName)
